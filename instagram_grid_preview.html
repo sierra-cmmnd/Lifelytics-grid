@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Instagram Grid Preview</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #fafafa;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 935px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .header {
+            padding: 20px;
+            text-align: center;
+            background: white;
+            border-bottom: 1px solid #dbdbdb;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            font-weight: 600;
+            color: #262626;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #8e8e8e;
+            font-size: 14px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1px;
+            background: #dbdbdb;
+        }
+
+        .grid-item {
+            aspect-ratio: 4/5;
+            position: relative;
+            overflow: hidden;
+            background: #f5f5f5;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .grid-item:hover {
+            transform: scale(1.02);
+            z-index: 10;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+        }
+
+        .grid-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .grid-item.placeholder {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f8f8f8;
+            border: 2px dashed #dbdbdb;
+            color: #8e8e8e;
+            font-size: 14px;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .grid-item.placeholder:hover {
+            background: #f0f0f0;
+            border-color: #c7c7c7;
+        }
+
+        .upload-zone {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        .upload-zone input {
+            display: none;
+        }
+
+        .upload-icon {
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+
+        .controls {
+            padding: 20px;
+            background: white;
+            border-top: 1px solid #dbdbdb;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: 1px solid #dbdbdb;
+            border-radius: 6px;
+            background: white;
+            color: #262626;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn:hover {
+            background: #f5f5f5;
+        }
+
+        .btn.primary {
+            background: #0095f6;
+            color: white;
+            border-color: #0095f6;
+        }
+
+        .btn.primary:hover {
+            background: #1877f2;
+        }
+
+        .status-indicator {
+            position: absolute;
+            bottom: 8px;
+            left: 8px;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 500;
+            color: white;
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(10px);
+        }
+
+        .status-draft {
+            background: rgba(142, 142, 147, 0.8);
+        }
+
+        .status-ready {
+            background: rgba(255, 193, 7, 0.8);
+        }
+
+        .status-posted {
+            background: rgba(52, 199, 89, 0.8);
+        }
+
+        .delete-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            border: none;
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .grid-item:hover .delete-btn {
+            opacity: 1;
+        }
+
+        .delete-btn:hover {
+            background: rgba(220, 53, 69, 0.8);
+            transform: scale(1.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Instagram Grid Preview</h1>
+            <p>Upload images to see how your Instagram feed will look</p>
+        </div>
+        
+        <div class="grid" id="grid">
+            <!-- Grid items will be generated here -->
+        </div>
+        
+        <div class="controls">
+            <button class="btn primary" onclick="addNewPost()">+ Add New Post</button>
+            <button class="btn" onclick="clearGrid()">Clear All</button>
+            <button class="btn" onclick="downloadGrid()">Save Grid Preview</button>
+        </div>
+    </div>
+
+    <script>
+        let posts = [];
+        let gridSize = 9; // 3x3 grid initially
+
+        function initializeGrid() {
+            const grid = document.getElementById('grid');
+            grid.innerHTML = '';
+            
+            for (let i = 0; i < gridSize; i++) {
+                const gridItem = document.createElement('div');
+                gridItem.className = 'grid-item placeholder';
+                gridItem.innerHTML = `
+                    <div class="upload-zone" onclick="selectImage(${i})">
+                        <input type="file" id="file-${i}" accept="image/*" onchange="handleImageUpload(${i}, event)">
+                        <div class="upload-icon">📷</div>
+                        <div>Click to add image</div>
+                    </div>
+                `;
+                grid.appendChild(gridItem);
+            }
+        }
+
+        function selectImage(index) {
+            document.getElementById(`file-${index}`).click();
+        }
+
+        function handleImageUpload(index, event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    updateGridItem(index, e.target.result, 'draft');
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function updateGridItem(index, imageSrc, status = 'draft') {
+            const grid = document.getElementById('grid');
+            const gridItem = grid.children[index];
+            
+            gridItem.className = 'grid-item';
+            gridItem.innerHTML = `
+                <img src="${imageSrc}" alt="Post ${index + 1}">
+                <button class="delete-btn" onclick="removeImage(${index})" title="Remove image">×</button>
+                <div class="status-indicator status-${status}" onclick="cycleStatus(${index})">${status}</div>
+            `;
+            
+            posts[index] = { image: imageSrc, status: status };
+        }
+
+        function removeImage(index) {
+            const grid = document.getElementById('grid');
+            const gridItem = grid.children[index];
+            
+            // Reset to placeholder
+            gridItem.className = 'grid-item placeholder';
+            gridItem.innerHTML = `
+                <div class="upload-zone" onclick="selectImage(${index})">
+                    <input type="file" id="file-${index}" accept="image/*" onchange="handleImageUpload(${index}, event)">
+                    <div class="upload-icon">📷</div>
+                    <div>Click to add image</div>
+                </div>
+            `;
+            
+            // Remove from posts array
+            delete posts[index];
+        }
+
+        function cycleStatus(index) {
+            const statusCycle = ['draft', 'ready', 'posted'];
+            const currentStatus = posts[index]?.status || 'draft';
+            const currentIndex = statusCycle.indexOf(currentStatus);
+            const nextStatus = statusCycle[(currentIndex + 1) % statusCycle.length];
+            
+            const statusElement = document.querySelector(`#grid .grid-item:nth-child(${index + 1}) .status-indicator`);
+            statusElement.textContent = nextStatus;
+            statusElement.className = `status-indicator status-${nextStatus}`;
+            
+            if (posts[index]) {
+                posts[index].status = nextStatus;
+            }
+        }
+
+        function addNewPost() {
+            gridSize += 3; // Add a new row
+            const grid = document.getElementById('grid');
+            
+            for (let i = gridSize - 3; i < gridSize; i++) {
+                const gridItem = document.createElement('div');
+                gridItem.className = 'grid-item placeholder';
+                gridItem.innerHTML = `
+                    <div class="upload-zone" onclick="selectImage(${i})">
+                        <input type="file" id="file-${i}" accept="image/*" onchange="handleImageUpload(${i}, event)">
+                        <div class="upload-icon">📷</div>
+                        <div>Click to add image</div>
+                    </div>
+                `;
+                grid.appendChild(gridItem);
+            }
+        }
+
+        function clearGrid() {
+            posts = [];
+            gridSize = 9;
+            initializeGrid();
+        }
+
+        function downloadGrid() {
+            // Simple implementation - in a real app you'd use html2canvas or similar
+            alert('Grid preview saved! (In a real implementation, this would download an image of your grid)');
+        }
+
+        // Initialize the grid when page loads
+        initializeGrid();
+    </script>
+</body>
+</html>
